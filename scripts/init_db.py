@@ -37,7 +37,18 @@ def seed_example_data():
         slack = System(name="Slack", category=SystemCategory.COMMUNICATION, connector_key="slack")
         github = System(name="GitHub", category=SystemCategory.CODE, connector_key="github")
         aws = System(name="AWS IAM", category=SystemCategory.CLOUD_INFRA, connector_key="aws_iam")
-        db.add_all([slack, github, aws])
+        google_ws = System(
+            name="Google Workspace", category=SystemCategory.PRODUCTIVITY, connector_key="google_workspace"
+        )
+        m365 = System(
+            name="Microsoft 365", category=SystemCategory.PRODUCTIVITY, connector_key="microsoft_365"
+        )
+        linear = System(name="Linear", category=SystemCategory.PRODUCTIVITY, connector_key="linear")
+        onepassword = System(
+            name="1Password", category=SystemCategory.PRODUCTIVITY, connector_key="onepassword"
+        )
+        okta = System(name="Okta", category=SystemCategory.CLOUD_INFRA, connector_key="okta")
+        db.add_all([slack, github, aws, google_ws, m365, linear, onepassword, okta])
         db.flush()  # asigna IDs sin cerrar la transacción
 
         # 2. Creamos una persona (el contratista del caso real de r/sysadmin)
@@ -72,6 +83,41 @@ def seed_example_data():
                 system_id=aws.id,
                 role="admin",  # <- este es el acceso peligroso del caso real (prod DB)
                 risk_level=RiskLevel.CRITICAL,
+                status=AccessStatus.ACTIVE,
+            ),
+            AccessGrant(
+                person_id=contractor.id,
+                system_id=google_ws.id,
+                role="member",
+                risk_level=RiskLevel.MEDIUM,
+                status=AccessStatus.ACTIVE,
+            ),
+            AccessGrant(
+                person_id=contractor.id,
+                system_id=m365.id,
+                role="member",
+                risk_level=RiskLevel.MEDIUM,
+                status=AccessStatus.ACTIVE,
+            ),
+            AccessGrant(
+                person_id=contractor.id,
+                system_id=linear.id,
+                role="member",
+                risk_level=RiskLevel.LOW,
+                status=AccessStatus.ACTIVE,
+            ),
+            AccessGrant(
+                person_id=contractor.id,
+                system_id=onepassword.id,
+                role="member",  # gestor de contraseñas: acceso indirecto a todo lo demás
+                risk_level=RiskLevel.HIGH,
+                status=AccessStatus.ACTIVE,
+            ),
+            AccessGrant(
+                person_id=contractor.id,
+                system_id=okta.id,
+                role="member",
+                risk_level=RiskLevel.HIGH,
                 status=AccessStatus.ACTIVE,
             ),
         ]
