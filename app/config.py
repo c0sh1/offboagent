@@ -28,6 +28,11 @@ class Settings(BaseSettings):
     github_owner: str = ""
     github_repo: str = ""
 
+    # AWS IAM (opcional; si no se configura, se usa el conector simulado)
+    aws_access_key_id: str = ""
+    aws_secret_access_key: str = ""
+    aws_region: str = "us-east-1"
+
 
 # Instancia única (patrón singleton simple) que se importa en todo el proyecto
 settings = Settings()
