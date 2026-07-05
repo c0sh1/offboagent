@@ -5,6 +5,7 @@ const RISK_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
 export default function PersonDetail({ personId, onBack }) {
   const [person, setPerson] = useState(null);
+  const [systems, setSystems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -12,6 +13,12 @@ export default function PersonDetail({ personId, onBack }) {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [offboardingEvent, setOffboardingEvent] = useState(null);
+
+  const [grantSystemId, setGrantSystemId] = useState("");
+  const [grantRole, setGrantRole] = useState("");
+  const [grantRisk, setGrantRisk] = useState("low");
+  const [grantSubmitting, setGrantSubmitting] = useState(false);
+  const [grantError, setGrantError] = useState(null);
 
   function loadPerson() {
     setLoading(true);
@@ -24,6 +31,7 @@ export default function PersonDetail({ personId, onBack }) {
 
   useEffect(() => {
     loadPerson();
+    api.listSystems().then(setSystems).catch(() => {});
   }, [personId]);
 
   async function handleOffboard(e) {
@@ -45,6 +53,27 @@ export default function PersonDetail({ personId, onBack }) {
     }
   }
 
+  async function handleAddGrant(e) {
+    e.preventDefault();
+    setGrantSubmitting(true);
+    setGrantError(null);
+    try {
+      await api.addAccessGrant(personId, {
+        system_id: grantSystemId,
+        role: grantRole || null,
+        risk_level: grantRisk,
+      });
+      setGrantSystemId("");
+      setGrantRole("");
+      setGrantRisk("low");
+      loadPerson();
+    } catch (err) {
+      setGrantError(err.message);
+    } finally {
+      setGrantSubmitting(false);
+    }
+  }
+
   if (loading) return <p>Cargando persona...</p>;
   if (error) return <p className="error">Error: {error}</p>;
   if (!person) return null;
@@ -54,6 +83,8 @@ export default function PersonDetail({ personId, onBack }) {
   );
 
   const canOffboard = person.status !== "offboarded";
+  const grantedSystemIds = new Set(person.access_grants.map((g) => g.system_id));
+  const availableSystems = systems.filter((s) => !grantedSystemIds.has(s.id));
 
   return (
     <div>
@@ -66,30 +97,81 @@ export default function PersonDetail({ personId, onBack }) {
       </p>
 
       <h3>Grafo de identidad ({sortedGrants.length} sistemas)</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Sistema</th>
-            <th>Rol</th>
-            <th>Riesgo</th>
-            <th>Estado</th>
-          </tr>
-        </thead>
-        <tbody>
-          {sortedGrants.map((grant) => (
-            <tr key={grant.id}>
-              <td>{grant.system_name}</td>
-              <td>{grant.role}</td>
-              <td>
-                <span className={`risk risk-${grant.risk_level}`}>
-                  {grant.risk_level}
-                </span>
-              </td>
-              <td>{grant.status}</td>
+      {sortedGrants.length === 0 ? (
+        <p className="subtitle">Todavía no tiene ningún acceso asignado.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Sistema</th>
+              <th>Rol</th>
+              <th>Riesgo</th>
+              <th>Estado</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {sortedGrants.map((grant) => (
+              <tr key={grant.id}>
+                <td>{grant.system_name}</td>
+                <td>{grant.role}</td>
+                <td>
+                  <span className={`risk risk-${grant.risk_level}`}>
+                    {grant.risk_level}
+                  </span>
+                </td>
+                <td>{grant.status}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      {canOffboard && availableSystems.length > 0 && (
+        <div className="offboard-panel">
+          <h3>Asignar acceso</h3>
+          <form onSubmit={handleAddGrant}>
+            <label>
+              Sistema
+              <select
+                value={grantSystemId}
+                onChange={(e) => setGrantSystemId(e.target.value)}
+                required
+              >
+                <option value="">Selecciona un sistema...</option>
+                {availableSystems.map((s) => (
+                  <option key={s.id} value={s.id}>
+                    {s.name}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Rol
+              <input
+                type="text"
+                value={grantRole}
+                onChange={(e) => setGrantRole(e.target.value)}
+                placeholder="ej. member, admin, write"
+              />
+            </label>
+            <label>
+              Nivel de riesgo
+              <select value={grantRisk} onChange={(e) => setGrantRisk(e.target.value)}>
+                <option value="low">Bajo</option>
+                <option value="medium">Medio</option>
+                <option value="high">Alto</option>
+                <option value="critical">Crítico</option>
+              </select>
+            </label>
+
+            {grantError && <p className="error">{grantError}</p>}
+
+            <button type="submit" className="primary" disabled={grantSubmitting}>
+              {grantSubmitting ? "Añadiendo..." : "Añadir acceso"}
+            </button>
+          </form>
+        </div>
+      )}
 
       {canOffboard && (
         <div className="offboard-panel">

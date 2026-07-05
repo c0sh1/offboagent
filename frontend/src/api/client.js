@@ -17,11 +17,22 @@ async function request(path, options = {}) {
 export const api = {
   listPersons: () => request("/persons"),
   getPerson: (personId) => request(`/persons/${personId}`),
-  startOffboarding: (payload) =>
-    request("/offboarding", {
+  createPerson: (payload) =>
+    request("/persons", { method: "POST", body: JSON.stringify(payload) }),
+  addAccessGrant: (personId, payload) =>
+    request(`/persons/${personId}/access-grants`, {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+
+  startOffboarding: (payload) =>
+    request("/offboarding", { method: "POST", body: JSON.stringify(payload) }),
   getOffboardingEvent: (eventId) => request(`/offboarding/${eventId}`),
+  listOffboardingEvents: () => request("/offboarding"),
+
   getOrphanedAccess: () => request("/security/orphaned-access"),
+
+  getDashboardStats: () => request("/dashboard/stats"),
+
+  listSystems: () => request("/systems"),
 };

@@ -22,6 +22,7 @@ class AccessGrantOut(BaseModel):
     risk_level: RiskLevel
     status: AccessStatus
     system_name: str | None = None  # se rellena a mano en el router (viene de grant.system.name)
+    system_id: str | None = None
 
 
 class PersonOut(BaseModel):
@@ -64,11 +65,44 @@ class OrphanFindingOut(BaseModel):
     matched_grant_id: str | None
 
 
+class PersonCreate(BaseModel):
+    full_name: str
+    email: str
+    person_type: PersonType = PersonType.EMPLOYEE
+    department: str | None = None
+
+
+class SystemOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+    category: str
+    connector_key: str
+
+
+class AccessGrantCreate(BaseModel):
+    system_id: str
+    role: str | None = None
+    risk_level: RiskLevel = RiskLevel.LOW
+
+
+class DashboardStatsOut(BaseModel):
+    total_persons: int
+    active_persons: int
+    offboarding_in_progress: int
+    offboarded_persons: int
+    systems_count: int
+    critical_active_grants: int
+    orphaned_access_count: int
+
+
 class OffboardingEventOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: str
     person_id: str
+    person_full_name: str | None = None
     status: OffboardingStatus
     started_at: datetime
     completed_at: datetime | None

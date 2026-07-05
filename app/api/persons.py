@@ -4,10 +4,29 @@ Endpoints relacionados con personas (empleados/contratistas).
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import get_db, Person
-from app.api.schemas import PersonOut, PersonDetailOut, AccessGrantOut
+from app.models import get_db, Person, System, AccessGrant
+from app.api.schemas import PersonOut, PersonDetailOut, PersonCreate, AccessGrantOut, AccessGrantCreate
 
 router = APIRouter(prefix="/persons", tags=["persons"])
+
+
+@router.post("", response_model=PersonOut, status_code=201)
+def create_person(payload: PersonCreate, db: Session = Depends(get_db)):
+    """Registra una nueva persona (empleado/contratista) en el grafo de identidad."""
+    existing = db.query(Person).filter(Person.email == payload.email).first()
+    if existing is not None:
+        raise HTTPException(status_code=400, detail="Ya existe una persona con ese email")
+
+    person = Person(
+        full_name=payload.full_name,
+        email=payload.email,
+        person_type=payload.person_type,
+        department=payload.department,
+    )
+    db.add(person)
+    db.commit()
+    db.refresh(person)
+    return person
 
 
 @router.get("", response_model=list[PersonOut])
@@ -23,9 +42,6 @@ def get_person(person_id: str, db: Session = Depends(get_db)):
     if person is None:
         raise HTTPException(status_code=404, detail="Persona no encontrada")
 
-    # Construimos manualmente los AccessGrantOut para incluir system_name,
-    # que vive en una tabla relacionada (grant.system.name), no directamente
-    # en AccessGrant.
     grants_out = [
         AccessGrantOut(
             id=g.id,
@@ -33,6 +49,7 @@ def get_person(person_id: str, db: Session = Depends(get_db)):
             risk_level=g.risk_level,
             status=g.status,
             system_name=g.system.name,
+            system_id=g.system_id,
         )
         for g in person.access_grants
     ]
@@ -45,4 +62,39 @@ def get_person(person_id: str, db: Session = Depends(get_db)):
         status=person.status,
         department=person.department,
         access_grants=grants_out,
+    )
+
+
+@router.post("/{person_id}/access-grants", response_model=AccessGrantOut, status_code=201)
+def add_access_grant(person_id: str, payload: AccessGrantCreate, db: Session = Depends(get_db)):
+    """
+    Asigna un acceso nuevo a una persona en un sistema concreto.
+    Esta es la pieza que completa el ciclo de vida: crear persona ->
+    asignarle accesos -> (más adelante) offboardearla con sentido.
+    """
+    person = db.query(Person).filter(Person.id == person_id).first()
+    if person is None:
+        raise HTTPException(status_code=404, detail="Persona no encontrada")
+
+    system = db.query(System).filter(System.id == payload.system_id).first()
+    if system is None:
+        raise HTTPException(status_code=404, detail="Sistema no encontrado")
+
+    grant = AccessGrant(
+        person_id=person.id,
+        system_id=system.id,
+        role=payload.role,
+        risk_level=payload.risk_level,
+    )
+    db.add(grant)
+    db.commit()
+    db.refresh(grant)
+
+    return AccessGrantOut(
+        id=grant.id,
+        role=grant.role,
+        risk_level=grant.risk_level,
+        status=grant.status,
+        system_name=system.name,
+        system_id=system.id,
     )

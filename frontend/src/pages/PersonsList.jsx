@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-export default function PersonsList({ onSelectPerson }) {
+export default function PersonsList({ onSelectPerson, onCreateNew }) {
   const [persons, setPersons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,7 +19,12 @@ export default function PersonsList({ onSelectPerson }) {
 
   return (
     <div>
-      <h2>Personas</h2>
+      <div className="page-header-row">
+        <h2>Personas</h2>
+        <button className="primary" onClick={onCreateNew}>
+          + Nueva persona
+        </button>
+      </div>
       <table>
         <thead>
           <tr>

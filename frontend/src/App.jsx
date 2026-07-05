@@ -1,48 +1,82 @@
 import { useState } from "react";
+import Dashboard from "./pages/Dashboard";
 import PersonsList from "./pages/PersonsList";
 import PersonDetail from "./pages/PersonDetail";
+import PersonCreate from "./pages/PersonCreate";
+import OffboardingHistory from "./pages/OffboardingHistory";
 import OrphanedAccessPanel from "./pages/OrphanedAccessPanel";
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState("persons"); // "persons" | "orphaned"
-  const [selectedPersonId, setSelectedPersonId] = useState(null);
+const NAV_ITEMS = [
+  { id: "dashboard", label: "Resumen" },
+  { id: "persons", label: "Personas" },
+  { id: "history", label: "Historial" },
+  { id: "orphaned", label: "Accesos huérfanos" },
+];
 
-  function goToTab(tab) {
-    setSelectedPersonId(null);
-    setActiveTab(tab);
+export default function App() {
+  const [activeView, setActiveView] = useState("dashboard");
+  const [personsSubView, setPersonsSubView] = useState(null);
+
+  function goToView(view) {
+    setPersonsSubView(null);
+    setActiveView(view);
+  }
+
+  function renderMain() {
+    if (activeView === "dashboard") {
+      return <Dashboard onNavigate={goToView} />;
+    }
+    if (activeView === "history") {
+      return <OffboardingHistory />;
+    }
+    if (activeView === "orphaned") {
+      return <OrphanedAccessPanel />;
+    }
+    if (personsSubView?.type === "detail") {
+      return (
+        <PersonDetail
+          personId={personsSubView.id}
+          onBack={() => setPersonsSubView(null)}
+        />
+      );
+    }
+    if (personsSubView?.type === "create") {
+      return (
+        <PersonCreate
+          onCreated={(person) =>
+            setPersonsSubView({ type: "detail", id: person.id })
+          }
+        />
+      );
+    }
+    return (
+      <PersonsList
+        onSelectPerson={(id) => setPersonsSubView({ type: "detail", id })}
+        onCreateNew={() => setPersonsSubView({ type: "create" })}
+      />
+    );
   }
 
   return (
-    <div className="app">
-      <header>
-        <h1>Offboarding Security Agent</h1>
+    <div className="shell">
+      <aside className="sidebar">
+        <div className="brand">
+          <span className="brand-mark" aria-hidden="true">◆</span>
+          <span className="brand-name">Offboarding Agent</span>
+        </div>
         <nav>
-          <button
-            className={activeTab === "persons" ? "tab active" : "tab"}
-            onClick={() => goToTab("persons")}
-          >
-            Personas
-          </button>
-          <button
-            className={activeTab === "orphaned" ? "tab active" : "tab"}
-            onClick={() => goToTab("orphaned")}
-          >
-            Accesos huérfanos
-          </button>
+          {NAV_ITEMS.map((item) => (
+            <button
+              key={item.id}
+              className={activeView === item.id ? "nav-item active" : "nav-item"}
+              onClick={() => goToView(item.id)}
+            >
+              {item.label}
+            </button>
+          ))}
         </nav>
-      </header>
-      <main>
-        {activeTab === "orphaned" ? (
-          <OrphanedAccessPanel />
-        ) : selectedPersonId ? (
-          <PersonDetail
-            personId={selectedPersonId}
-            onBack={() => setSelectedPersonId(null)}
-          />
-        ) : (
-          <PersonsList onSelectPerson={setSelectedPersonId} />
-        )}
-      </main>
+      </aside>
+      <main className="content">{renderMain()}</main>
     </div>
   );
 }

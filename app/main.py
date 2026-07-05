@@ -11,6 +11,8 @@ from app.models import Base, engine
 from app.api.persons import router as persons_router
 from app.api.offboarding import router as offboarding_router
 from app.api.security import router as security_router
+from app.api.dashboard import router as dashboard_router
+from app.api.systems import router as systems_router
 
 app = FastAPI(
     title="Offboarding Security Agent",
@@ -18,9 +20,6 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS: permite que el frontend (React en localhost:5173 durante desarrollo)
-# pueda llamar a esta API desde el navegador. Sin esto, el navegador
-# bloquea las peticiones por política de same-origin.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -29,12 +28,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Crea las tablas si no existen (equivalente a lo que hace scripts/init_db.py)
 Base.metadata.create_all(bind=engine)
 
 app.include_router(persons_router)
 app.include_router(offboarding_router)
 app.include_router(security_router)
+app.include_router(dashboard_router)
+app.include_router(systems_router)
 
 
 @app.get("/", tags=["health"])
