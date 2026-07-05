@@ -99,6 +99,25 @@ def execute_offboarding(db: Session, offboarding_event_id: str) -> OffboardingEv
     return event
 
 
+def revoke_grant_by_id(db: Session, event: OffboardingEvent, grant_id: str) -> dict:
+    """
+    Revoca un AccessGrant concreto por su id. Pensada para ser llamada
+    desde una herramienta del agente (Fase 5), donde el LLM decide QUÉ
+    grant_id revocar, pero la ejecución real sigue pasando por el mismo
+    código (_revoke_single_grant) que usa el flujo determinista.
+    """
+    grant = db.query(AccessGrant).filter(AccessGrant.id == grant_id).first()
+    if grant is None:
+        return {"success": False, "detail": f"No existe ningún AccessGrant con id={grant_id}"}
+
+    had_error = _revoke_single_grant(db, event, grant)
+    return {
+        "success": not had_error,
+        "system": grant.system.name,
+        "status": grant.status.value,
+    }
+
+
 def _revoke_single_grant(db: Session, event: OffboardingEvent, grant: AccessGrant) -> bool:
     """
     Revoca un único AccessGrant a través de su conector, y registra
