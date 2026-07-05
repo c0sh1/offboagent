@@ -22,6 +22,12 @@ class Settings(BaseSettings):
     # Entorno
     environment: str = "development"
 
+    # GitHub (opcional; si no se configura, se usa el conector simulado
+    # de forma automática -> ver app/connectors/registry.py)
+    github_access_token: str = ""
+    github_owner: str = ""
+    github_repo: str = ""
+
 
 # Instancia única (patrón singleton simple) que se importa en todo el proyecto
 settings = Settings()

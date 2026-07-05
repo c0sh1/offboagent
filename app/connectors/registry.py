@@ -4,24 +4,29 @@ Registro central de conectores.
 Mapea connector_key (guardado en System.connector_key en la BD)
 a una instancia del conector correspondiente.
 
-Esto es lo que hace posible que el servicio de offboarding (Fase 4)
-escriba código genérico como:
-
-    connector = get_connector(system.connector_key)
-    connector.revoke_access(external_account_id)
-
-sin ningún "if system.name == 'Slack'" hardcodeado.
-Cuando en el futuro sustituyamos un mock por el conector real,
-solo cambiamos esta línea (una sola vez, en un solo lugar).
+Para GitHub: si hay credenciales reales configuradas en .env, se usa
+el conector real (llamadas HTTP de verdad); si no, se cae de forma
+automática al conector simulado. Así puedes seguir desarrollando y
+probando sin romper nada, y "activas" la integración real solo
+poniendo el token en el .env, sin tocar código.
 """
+from app.config import settings
 from app.connectors.base import BaseConnector
 from app.connectors.mock_slack import MockSlackConnector
 from app.connectors.mock_github import MockGitHubConnector
 from app.connectors.mock_aws_iam import MockAWSIAMConnector
 
+
+def _build_github_connector() -> BaseConnector:
+    if settings.github_access_token and settings.github_owner and settings.github_repo:
+        from app.connectors.github_real import GitHubConnector
+        return GitHubConnector()
+    return MockGitHubConnector()
+
+
 _CONNECTOR_REGISTRY: dict[str, BaseConnector] = {
     "slack": MockSlackConnector(),
-    "github": MockGitHubConnector(),
+    "github": _build_github_connector(),
     "aws_iam": MockAWSIAMConnector(),
 }
 
