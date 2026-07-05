@@ -55,6 +55,15 @@ class AuditLogEntryOut(BaseModel):
     timestamp: datetime
 
 
+class OrphanFindingOut(BaseModel):
+    system_name: str
+    external_account_id: str
+    email: str
+    reason: str
+    matched_person_id: str | None
+    matched_grant_id: str | None
+
+
 class OffboardingEventOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

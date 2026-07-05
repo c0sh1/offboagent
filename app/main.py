@@ -9,6 +9,7 @@ from fastapi import FastAPI
 from app.models import Base, engine
 from app.api.persons import router as persons_router
 from app.api.offboarding import router as offboarding_router
+from app.api.security import router as security_router
 
 app = FastAPI(
     title="Offboarding Security Agent",
@@ -21,6 +22,7 @@ Base.metadata.create_all(bind=engine)
 
 app.include_router(persons_router)
 app.include_router(offboarding_router)
+app.include_router(security_router)
 
 
 @app.get("/", tags=["health"])
