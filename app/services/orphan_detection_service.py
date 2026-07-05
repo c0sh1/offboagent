@@ -20,6 +20,11 @@ from sqlalchemy.orm import Session
 
 from app.models import Person, PersonStatus, System, AccessGrant, AccessStatus
 from app.connectors.registry import get_connector
+from app.config import settings
+
+_KNOWN_SERVICE_ACCOUNT_EMAILS = {
+    e.strip() for e in settings.service_account_emails.split(",") if e.strip()
+}
 
 
 @dataclass
@@ -60,6 +65,8 @@ def _evaluate_account(db: Session, system: System, account: dict) -> OrphanFindi
     person = db.query(Person).filter(Person.email == email).first()
 
     if person is None:
+        if email in _KNOWN_SERVICE_ACCOUNT_EMAILS:
+            return None
         return OrphanFinding(
             system_name=system.name,
             external_account_id=external_id,

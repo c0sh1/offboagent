@@ -50,6 +50,7 @@ def get_person(person_id: str, db: Session = Depends(get_db)):
             status=g.status,
             system_name=g.system.name,
             system_id=g.system_id,
+            external_account_id=g.external_account_id,
         )
         for g in person.access_grants
     ]
@@ -85,6 +86,7 @@ def add_access_grant(person_id: str, payload: AccessGrantCreate, db: Session = D
         system_id=system.id,
         role=payload.role,
         risk_level=payload.risk_level,
+        external_account_id=payload.external_account_id,
     )
     db.add(grant)
     db.commit()
@@ -97,4 +99,5 @@ def add_access_grant(person_id: str, payload: AccessGrantCreate, db: Session = D
         status=grant.status,
         system_name=system.name,
         system_id=system.id,
+        external_account_id=grant.external_account_id,
     )

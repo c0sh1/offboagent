@@ -33,6 +33,13 @@ class Settings(BaseSettings):
     aws_secret_access_key: str = ""
     aws_region: str = "us-east-1"
 
+    # Cuentas de servicio conocidas (las credenciales que usa el propio
+    # sistema para conectarse a cada API), separadas por comas. Se
+    # excluyen del detector de accesos huérfanos para no generar
+    # falsos positivos: no son un riesgo real, son nuestras propias
+    # credenciales admin.
+    service_account_emails: str = ""
+
 
 # Instancia única (patrón singleton simple) que se importa en todo el proyecto
 settings = Settings()

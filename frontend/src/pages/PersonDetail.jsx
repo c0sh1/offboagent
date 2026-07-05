@@ -17,6 +17,7 @@ export default function PersonDetail({ personId, onBack }) {
   const [grantSystemId, setGrantSystemId] = useState("");
   const [grantRole, setGrantRole] = useState("");
   const [grantRisk, setGrantRisk] = useState("low");
+  const [grantExternalId, setGrantExternalId] = useState("");
   const [grantSubmitting, setGrantSubmitting] = useState(false);
   const [grantError, setGrantError] = useState(null);
 
@@ -36,6 +37,12 @@ export default function PersonDetail({ personId, onBack }) {
 
   async function handleOffboard(e) {
     e.preventDefault();
+    const confirmed = window.confirm(
+      `¿Seguro que quieres revocar TODOS los accesos de ${person.full_name}? ` +
+        `Esta acción es irreversible.`
+    );
+    if (!confirmed) return;
+
     setSubmitting(true);
     setError(null);
     try {
@@ -62,10 +69,12 @@ export default function PersonDetail({ personId, onBack }) {
         system_id: grantSystemId,
         role: grantRole || null,
         risk_level: grantRisk,
+        external_account_id: grantExternalId || null,
       });
       setGrantSystemId("");
       setGrantRole("");
       setGrantRisk("low");
+      setGrantExternalId("");
       loadPerson();
     } catch (err) {
       setGrantError(err.message);
@@ -162,6 +171,15 @@ export default function PersonDetail({ personId, onBack }) {
                 <option value="high">Alto</option>
                 <option value="critical">Crítico</option>
               </select>
+            </label>
+            <label>
+              Identificador en el sistema externo (opcional)
+              <input
+                type="text"
+                value={grantExternalId}
+                onChange={(e) => setGrantExternalId(e.target.value)}
+                placeholder="ej. su username real en GitHub/AWS"
+              />
             </label>
 
             {grantError && <p className="error">{grantError}</p>}

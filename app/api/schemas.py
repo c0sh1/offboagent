@@ -23,6 +23,7 @@ class AccessGrantOut(BaseModel):
     status: AccessStatus
     system_name: str | None = None  # se rellena a mano en el router (viene de grant.system.name)
     system_id: str | None = None
+    external_account_id: str | None = None
 
 
 class PersonOut(BaseModel):
@@ -85,6 +86,7 @@ class AccessGrantCreate(BaseModel):
     system_id: str
     role: str | None = None
     risk_level: RiskLevel = RiskLevel.LOW
+    external_account_id: str | None = None
 
 
 class DashboardStatsOut(BaseModel):
