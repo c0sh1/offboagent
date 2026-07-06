@@ -6,6 +6,7 @@ import PersonCreate from "./pages/PersonCreate";
 import OffboardingHistory from "./pages/OffboardingHistory";
 import OrphanedAccessPanel from "./pages/OrphanedAccessPanel";
 import Users from "./pages/Users";
+import Account from "./pages/Account";
 import Login from "./pages/Login";
 import { getToken, clearToken } from "./api/authToken";
 import { api, setUnauthorizedHandler } from "./api/client";
@@ -15,6 +16,7 @@ const BASE_NAV_ITEMS = [
   { id: "persons", label: "Personas" },
   { id: "history", label: "Historial" },
   { id: "orphaned", label: "Accesos huérfanos" },
+  { id: "account", label: "Mi cuenta" },
 ];
 
 export default function App() {
@@ -57,6 +59,7 @@ export default function App() {
     if (activeView === "history") return <OffboardingHistory />;
     if (activeView === "orphaned") return <OrphanedAccessPanel />;
     if (activeView === "users") return <Users currentUser={currentUser} />;
+    if (activeView === "account") return <Account currentUser={currentUser} />;
 
     if (personsSubView?.type === "detail") {
       return (

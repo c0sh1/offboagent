@@ -5,6 +5,7 @@ const ROLE_LABELS = { owner: "Propietario", admin: "Administrador", viewer: "Sol
 
 export default function Users({ currentUser }) {
   const [users, setUsers] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -24,7 +25,15 @@ export default function Users({ currentUser }) {
       .finally(() => setLoading(false));
   }
 
-  useEffect(loadUsers, []);
+  useEffect(() => {
+    loadUsers();
+    api.getUserAuditLog().then(setAuditLog).catch(() => {});
+  }, []);
+
+  function refreshAll() {
+    loadUsers();
+    api.getUserAuditLog().then(setAuditLog).catch(() => {});
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -36,7 +45,7 @@ export default function Users({ currentUser }) {
       setFullName("");
       setPassword("");
       setRole("viewer");
-      loadUsers();
+      refreshAll();
     } catch (err) {
       setFormError(err.message);
     } finally {
@@ -51,7 +60,7 @@ export default function Users({ currentUser }) {
     if (!confirmed) return;
     try {
       await api.deleteUser(user.id);
-      loadUsers();
+      refreshAll();
     } catch (err) {
       alert(err.message);
     }
@@ -153,6 +162,34 @@ export default function Users({ currentUser }) {
           </button>
         </form>
       </div>
+
+      <h3>Historial de gestión de usuarios</h3>
+      {auditLog.length === 0 ? (
+        <p className="subtitle">Todavía no hay acciones registradas.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Quién</th>
+              <th>Acción</th>
+              <th>Sobre quién</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {auditLog.map((entry) => (
+              <tr key={entry.id}>
+                <td>{entry.actor_email}</td>
+                <td>{entry.action === "create_user" ? "Creó a" : "Eliminó a"}</td>
+                <td>
+                  {entry.target_email} ({ROLE_LABELS[entry.target_role] || entry.target_role})
+                </td>
+                <td>{new Date(entry.timestamp).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

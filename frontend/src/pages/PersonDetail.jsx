@@ -114,6 +114,7 @@ export default function PersonDetail({ personId, onBack, currentUser }) {
           <thead>
             <tr>
               <th>Sistema</th>
+              <th>Cuenta externa</th>
               <th>Rol</th>
               <th>Riesgo</th>
               <th>Estado</th>
@@ -123,6 +124,7 @@ export default function PersonDetail({ personId, onBack, currentUser }) {
             {sortedGrants.map((grant) => (
               <tr key={grant.id}>
                 <td>{grant.system_name}</td>
+                <td>{grant.external_account_id || "—"}</td>
                 <td>{grant.role}</td>
                 <td>
                   <span className={`risk risk-${grant.risk_level}`}>

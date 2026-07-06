@@ -9,7 +9,7 @@ campos internos, o dar forma distinta a la respuesta sin tocar la BD.
 """
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models import PersonType, PersonStatus, AccessStatus, RiskLevel, OffboardingStatus, UserRole
 
@@ -114,8 +114,8 @@ class OffboardingEventOut(BaseModel):
 class UserCreate(BaseModel):
     email: str
     full_name: str
-    password: str
-    role: UserRole = UserRole.VIEWER  # ignorado durante el bootstrap (primer usuario -> siempre admin)
+    password: str = Field(min_length=8, description="Mínimo 8 caracteres")
+    role: UserRole = UserRole.VIEWER
 
 
 class UserOut(BaseModel):
@@ -135,3 +135,28 @@ class LoginRequest(BaseModel):
 class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
+
+class PasswordChangeRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(min_length=8, description="Mínimo 8 caracteres")
+
+
+class UserAuditLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    actor_email: str
+    action: str
+    target_email: str
+    target_role: str | None
+    timestamp: datetime
+
+class PersonAuditLogOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    actor_email: str
+    action: str
+    person_email: str
+    detail: str | None
+    timestamp: datetime

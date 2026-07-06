@@ -1,12 +1,11 @@
 """
-Endpoints de gestión de usuarios del sistema (no confundir con
-Person: estos son quienes OPERAN la herramienta).
+Endpoints de gestión de usuarios del sistema.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import get_db, User, UserRole
-from app.api.schemas import UserOut
+from app.models import get_db, User, UserRole, UserAuditLog
+from app.api.schemas import UserOut, UserAuditLogOut
 from app.auth.dependencies import require_admin
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -14,21 +13,18 @@ router = APIRouter(prefix="/users", tags=["users"])
 
 @router.get("", response_model=list[UserOut])
 def list_users(db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
-    """Solo un admin/owner puede ver la lista de usuarios del sistema."""
     return db.query(User).all()
+
+
+@router.get("/audit-log", response_model=list[UserAuditLogOut])
+def get_user_audit_log(db: Session = Depends(get_db), current_user: User = Depends(require_admin)):
+    return db.query(UserAuditLog).order_by(UserAuditLog.timestamp.desc()).all()
 
 
 @router.delete("/{user_id}", status_code=204)
 def delete_user(
     user_id: str, db: Session = Depends(get_db), current_user: User = Depends(require_admin)
 ):
-    """
-    Elimina un usuario. Reglas, en el mismo espíritu que la creación:
-    - Nadie puede eliminarse a sí mismo (evita quedarte fuera por error).
-    - Nadie puede eliminar al Owner (es único, el sistema lo necesita).
-    - Un Admin solo puede eliminar Viewers (no a otros Admins).
-    - El Owner puede eliminar tanto Admins como Viewers.
-    """
     target = db.query(User).filter(User.id == user_id).first()
     if target is None:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
@@ -44,5 +40,13 @@ def delete_user(
             status_code=403, detail="Un Admin solo puede eliminar usuarios de solo lectura (Viewer)"
         )
 
+    db.add(
+        UserAuditLog(
+            actor_email=current_user.email,
+            action="delete_user",
+            target_email=target.email,
+            target_role=target.role.value,
+        )
+    )
     db.delete(target)
     db.commit()

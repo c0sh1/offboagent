@@ -3,6 +3,7 @@ import { api } from "../api/client";
 
 export default function PersonsList({ onSelectPerson, onCreateNew, currentUser }) {
   const [persons, setPersons] = useState([]);
+  const [auditLog, setAuditLog] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -12,6 +13,7 @@ export default function PersonsList({ onSelectPerson, onCreateNew, currentUser }
       .then(setPersons)
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
+    api.getPersonAuditLog().then(setAuditLog).catch(() => {});
   }, []);
 
   if (loading) return <p>Cargando personas...</p>;
@@ -53,6 +55,34 @@ export default function PersonsList({ onSelectPerson, onCreateNew, currentUser }
           ))}
         </tbody>
       </table>
+
+      <h3>Historial de altas y accesos</h3>
+      {auditLog.length === 0 ? (
+        <p className="subtitle">Todavía no hay acciones registradas.</p>
+      ) : (
+        <table>
+          <thead>
+            <tr>
+              <th>Quién</th>
+              <th>Acción</th>
+              <th>Persona</th>
+              <th>Detalle</th>
+              <th>Fecha</th>
+            </tr>
+          </thead>
+          <tbody>
+            {auditLog.map((entry) => (
+              <tr key={entry.id}>
+                <td>{entry.actor_email}</td>
+                <td>{entry.action === "create_person" ? "Dio de alta" : "Asignó acceso"}</td>
+                <td>{entry.person_email}</td>
+                <td>{entry.detail}</td>
+                <td>{new Date(entry.timestamp).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
     </div>
   );
 }

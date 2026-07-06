@@ -7,6 +7,8 @@ from app.models.system import System, SystemCategory
 from app.models.access_grant import AccessGrant, AccessStatus, RiskLevel
 from app.models.audit import OffboardingEvent, OffboardingStatus, AuditLogEntry
 from app.models.user import User, UserRole
+from app.models.user_audit import UserAuditLog
+from app.models.person_audit import PersonAuditLog
 
 __all__ = [
     "Base",
@@ -26,4 +28,6 @@ __all__ = [
     "AuditLogEntry",
     "User",
     "UserRole",
+    "UserAuditLog",
+    "PersonAuditLog",
 ]

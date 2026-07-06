@@ -35,6 +35,12 @@ export const api = {
   login: (payload) =>
     request("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
   getMe: () => request("/auth/me"),
+  changePassword: (payload) =>
+    request("/auth/me/password", { method: "POST", body: JSON.stringify(payload) }),
+
+  listUsers: () => request("/users"),
+  deleteUser: (userId) => request(`/users/${userId}`, { method: "DELETE" }),
+  getUserAuditLog: () => request("/users/audit-log"),
 
   listUsers: () => request("/users"),
   deleteUser: (userId) => request(`/users/${userId}`, { method: "DELETE" }),
@@ -47,6 +53,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify(payload),
     }),
+  getPersonAuditLog: () => request("/persons/audit-log"),
 
   startOffboarding: (payload) =>
     request("/offboarding", { method: "POST", body: JSON.stringify(payload) }),

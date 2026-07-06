@@ -1,20 +1,13 @@
 """
-Endpoints de autenticación: registro y login.
-
-Jerarquía de 3 roles:
-- Owner: ÚNICO en todo el sistema. Se crea automáticamente al primer
-  usuario que se registra (el bootstrap). Puede crear Admins y Viewers.
-- Admin: creado solo por el Owner. Puede operar la herramienta y
-  puede crear Viewers - pero NO puede crear más Admins ni otro Owner.
-- Viewer: creado por el Owner o un Admin. Solo puede consultar.
+Endpoints de autenticación: registro, login, y cambio de contraseña.
 """
 from fastapi import APIRouter, Depends, HTTPException, Request
 import jwt
 
 from sqlalchemy.orm import Session
 
-from app.models import get_db, User, UserRole
-from app.api.schemas import UserCreate, UserOut, LoginRequest, TokenOut
+from app.models import get_db, User, UserRole, UserAuditLog
+from app.api.schemas import UserCreate, UserOut, LoginRequest, TokenOut, PasswordChangeRequest
 from app.auth.security import hash_password, verify_password, create_access_token, decode_access_token
 from app.auth.dependencies import get_current_user
 
@@ -76,6 +69,16 @@ def register(payload: UserCreate, request: Request, db: Session = Depends(get_db
         role=role,
     )
     db.add(user)
+
+    db.add(
+        UserAuditLog(
+            actor_email=caller.email if caller else user.email,
+            action="create_user",
+            target_email=user.email,
+            target_role=role.value,
+        )
+    )
+
     db.commit()
     db.refresh(user)
     return user
@@ -94,3 +97,21 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.post("/me/password", status_code=204)
+def change_my_password(
+    payload: PasswordChangeRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Cambio de contraseña en autoservicio: cualquier usuario logueado
+    (sea Owner, Admin o Viewer) puede cambiar SU PROPIA contraseña,
+    sin depender de que un admin lo haga por él.
+    """
+    if not verify_password(payload.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=401, detail="La contraseña actual no es correcta")
+
+    current_user.hashed_password = hash_password(payload.new_password)
+    db.commit()

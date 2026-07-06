@@ -1,14 +1,18 @@
 """
 Endpoints relacionados con personas (empleados/contratistas).
-
-Todos los endpoints requieren autenticación (current_user), excepto
-ninguno aquí - este router entero está protegido.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import get_db, Person, System, AccessGrant, User
-from app.api.schemas import PersonOut, PersonDetailOut, PersonCreate, AccessGrantOut, AccessGrantCreate
+from app.models import get_db, Person, System, AccessGrant, User, PersonAuditLog
+from app.api.schemas import (
+    PersonOut,
+    PersonDetailOut,
+    PersonCreate,
+    AccessGrantOut,
+    AccessGrantCreate,
+    PersonAuditLogOut,
+)
 from app.auth.dependencies import get_current_user, require_admin
 
 router = APIRouter(prefix="/persons", tags=["persons"])
@@ -30,6 +34,17 @@ def create_person(
         department=payload.department,
     )
     db.add(person)
+
+    db.add(
+        PersonAuditLog(
+            actor_email=current_user.email,
+            action="create_person",
+            person_email=person.email,
+            detail=f"Tipo: {payload.person_type.value}"
+            + (f", departamento: {payload.department}" if payload.department else ""),
+        )
+    )
+
     db.commit()
     db.refresh(person)
     return person
@@ -39,6 +54,16 @@ def create_person(
 def list_persons(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Lista todas las personas registradas."""
     return db.query(Person).all()
+
+
+@router.get("/audit-log", response_model=list[PersonAuditLogOut])
+def get_person_audit_log(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    """
+    Quién dio de alta a cada persona y quién le asignó cada acceso.
+    Visible para cualquier usuario logueado (incluidos los Viewer):
+    esta transparencia es justo el propósito de un rol de solo lectura.
+    """
+    return db.query(PersonAuditLog).order_by(PersonAuditLog.timestamp.desc()).all()
 
 
 @router.get("/{person_id}", response_model=PersonDetailOut)
@@ -102,6 +127,16 @@ def add_access_grant(
         external_account_id=payload.external_account_id,
     )
     db.add(grant)
+
+    db.add(
+        PersonAuditLog(
+            actor_email=current_user.email,
+            action="assign_access_grant",
+            person_email=person.email,
+            detail=f"Sistema: {system.name}, rol: {payload.role or '—'}, riesgo: {payload.risk_level.value}",
+        )
+    )
+
     db.commit()
     db.refresh(grant)
 
