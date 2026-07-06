@@ -110,3 +110,26 @@ class OffboardingEventOut(BaseModel):
     completed_at: datetime | None
     summary_report: str | None
     log_entries: list[AuditLogEntryOut]
+
+class UserCreate(BaseModel):
+    email: str
+    full_name: str
+    password: str
+
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: str
+    full_name: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"

@@ -1,18 +1,22 @@
 """
 Endpoint de estadísticas agregadas, para la pantalla de dashboard.
+Requiere autenticación.
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.models import get_db, Person, PersonStatus, System, AccessGrant, AccessStatus, RiskLevel
+from app.models import get_db, Person, PersonStatus, System, AccessGrant, AccessStatus, RiskLevel, User
 from app.api.schemas import DashboardStatsOut
 from app.services.orphan_detection_service import detect_orphaned_access
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/stats", response_model=DashboardStatsOut)
-def get_dashboard_stats(db: Session = Depends(get_db)):
+def get_dashboard_stats(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
     total_persons = db.query(Person).count()
     active_persons = db.query(Person).filter(Person.status == PersonStatus.ACTIVE).count()
     offboarding_in_progress = db.query(Person).filter(

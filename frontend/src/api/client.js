@@ -1,10 +1,24 @@
+import { getToken, clearToken } from "./authToken";
+
 const API_BASE_URL = "http://127.0.0.1:8000";
 
+let onUnauthorized = () => {};
+export function setUnauthorizedHandler(fn) {
+  onUnauthorized = fn;
+}
+
 async function request(path, options = {}) {
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { "Content-Type": "application/json" },
-    ...options,
-  });
+  const token = getToken();
+  const headers = { "Content-Type": "application/json", ...options.headers };
+  if (token) headers["Authorization"] = `Bearer ${token}`;
+
+  const response = await fetch(`${API_BASE_URL}${path}`, { ...options, headers });
+
+  if (response.status === 401) {
+    clearToken();
+    onUnauthorized();
+    throw new Error("Sesión expirada. Vuelve a iniciar sesión.");
+  }
 
   if (!response.ok) {
     const errorBody = await response.json().catch(() => ({}));
@@ -15,6 +29,12 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  register: (payload) =>
+    request("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
+  login: (payload) =>
+    request("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
+  getMe: () => request("/auth/me"),
+
   listPersons: () => request("/persons"),
   getPerson: (personId) => request(`/persons/${personId}`),
   createPerson: (payload) =>

@@ -1,24 +1,22 @@
 """
 Endpoints de seguridad: detección proactiva de accesos huérfanos.
+Requiere autenticación.
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.models import get_db
+from app.models import get_db, User
 from app.api.schemas import OrphanFindingOut
 from app.services.orphan_detection_service import detect_orphaned_access
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/security", tags=["security"])
 
 
 @router.get("/orphaned-access", response_model=list[OrphanFindingOut])
-def get_orphaned_access(db: Session = Depends(get_db)):
-    """
-    Compara, sistema por sistema, quién tiene acceso activo AHORA
-    MISMO contra quién debería tenerlo según nuestro grafo de
-    identidad. Pensado para correr periódicamente (cron diario) en
-    producción, no solo a demanda.
-    """
+def get_orphaned_access(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
     findings = detect_orphaned_access(db)
     return [
         OrphanFindingOut(

@@ -1,17 +1,23 @@
 """
 Endpoints relacionados con personas (empleados/contratistas).
+
+Todos los endpoints requieren autenticación (current_user), excepto
+ninguno aquí - este router entero está protegido.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import get_db, Person, System, AccessGrant
+from app.models import get_db, Person, System, AccessGrant, User
 from app.api.schemas import PersonOut, PersonDetailOut, PersonCreate, AccessGrantOut, AccessGrantCreate
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/persons", tags=["persons"])
 
 
 @router.post("", response_model=PersonOut, status_code=201)
-def create_person(payload: PersonCreate, db: Session = Depends(get_db)):
+def create_person(
+    payload: PersonCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
     """Registra una nueva persona (empleado/contratista) en el grafo de identidad."""
     existing = db.query(Person).filter(Person.email == payload.email).first()
     if existing is not None:
@@ -30,13 +36,15 @@ def create_person(payload: PersonCreate, db: Session = Depends(get_db)):
 
 
 @router.get("", response_model=list[PersonOut])
-def list_persons(db: Session = Depends(get_db)):
+def list_persons(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """Lista todas las personas registradas."""
     return db.query(Person).all()
 
 
 @router.get("/{person_id}", response_model=PersonDetailOut)
-def get_person(person_id: str, db: Session = Depends(get_db)):
+def get_person(
+    person_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
     """Detalle de una persona, incluyendo TODOS sus accesos (el grafo de identidad)."""
     person = db.query(Person).filter(Person.id == person_id).first()
     if person is None:
@@ -67,7 +75,12 @@ def get_person(person_id: str, db: Session = Depends(get_db)):
 
 
 @router.post("/{person_id}/access-grants", response_model=AccessGrantOut, status_code=201)
-def add_access_grant(person_id: str, payload: AccessGrantCreate, db: Session = Depends(get_db)):
+def add_access_grant(
+    person_id: str,
+    payload: AccessGrantCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Asigna un acceso nuevo a una persona en un sistema concreto.
     Esta es la pieza que completa el ciclo de vida: crear persona ->

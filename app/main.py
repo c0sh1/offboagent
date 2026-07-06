@@ -13,6 +13,7 @@ from app.api.offboarding import router as offboarding_router
 from app.api.security import router as security_router
 from app.api.dashboard import router as dashboard_router
 from app.api.systems import router as systems_router
+from app.api.auth import router as auth_router
 
 app = FastAPI(
     title="Offboarding Security Agent",
@@ -35,6 +36,7 @@ app.include_router(offboarding_router)
 app.include_router(security_router)
 app.include_router(dashboard_router)
 app.include_router(systems_router)
+app.include_router(auth_router)
 
 
 @app.get("/", tags=["health"])

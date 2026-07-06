@@ -40,6 +40,10 @@ class Settings(BaseSettings):
     # credenciales admin.
     service_account_emails: str = ""
 
+    # Autenticación
+    jwt_secret_key: str = "cambia-esto-en-produccion-por-algo-aleatorio-y-largo"
+    jwt_expire_hours: int = 24
+
 
 # Instancia única (patrón singleton simple) que se importa en todo el proyecto
 settings = Settings()

@@ -427,3 +427,22 @@ tr.finding-no_active_grant_recorded { box-shadow: inset 3px 0 0 #FB923C; }
   .sidebar nav { flex-direction: row; }
   .content { padding: 1.25rem; }
 }
+
+.login-screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink-900);
+}
+
+.login-form {
+  width: 100%;
+  max-width: 360px;
+}
+
+.login-form h2 { margin-top: 0.25rem; }
+
+.logout-button {
+  margin-top: auto;
+}

@@ -1,12 +1,14 @@
 """
 Endpoints del flujo de offboarding: aquí es donde RR.HH. "aprieta el botón".
+Todos los endpoints requieren autenticación.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import get_db, OffboardingEvent
+from app.models import get_db, OffboardingEvent, User
 from app.api.schemas import OffboardingRequest, OffboardingEventOut, AuditLogEntryOut
 from app.services.offboarding_service import initiate_offboarding, execute_offboarding
+from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/offboarding", tags=["offboarding"])
 
@@ -25,14 +27,20 @@ def _serialize_event(event: OffboardingEvent) -> OffboardingEventOut:
 
 
 @router.get("", response_model=list[OffboardingEventOut])
-def list_offboarding_events(db: Session = Depends(get_db)):
+def list_offboarding_events(
+    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
     """Historial completo de offboardings, más recientes primero."""
     events = db.query(OffboardingEvent).order_by(OffboardingEvent.started_at.desc()).all()
     return [_serialize_event(e) for e in events]
 
 
 @router.post("", response_model=OffboardingEventOut)
-def start_offboarding(payload: OffboardingRequest, db: Session = Depends(get_db)):
+def start_offboarding(
+    payload: OffboardingRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     try:
         event = initiate_offboarding(
             db,
@@ -48,7 +56,9 @@ def start_offboarding(payload: OffboardingRequest, db: Session = Depends(get_db)
 
 
 @router.get("/{event_id}", response_model=OffboardingEventOut)
-def get_offboarding_event(event_id: str, db: Session = Depends(get_db)):
+def get_offboarding_event(
+    event_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+):
     event = db.query(OffboardingEvent).filter(OffboardingEvent.id == event_id).first()
     if event is None:
         raise HTTPException(status_code=404, detail="Evento de offboarding no encontrado")

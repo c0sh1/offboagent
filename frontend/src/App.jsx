@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Dashboard from "./pages/Dashboard";
 import PersonsList from "./pages/PersonsList";
 import PersonDetail from "./pages/PersonDetail";
 import PersonCreate from "./pages/PersonCreate";
 import OffboardingHistory from "./pages/OffboardingHistory";
 import OrphanedAccessPanel from "./pages/OrphanedAccessPanel";
+import Login from "./pages/Login";
+import { getToken, clearToken } from "./api/authToken";
+import { setUnauthorizedHandler } from "./api/client";
 
 const NAV_ITEMS = [
   { id: "dashboard", label: "Resumen" },
@@ -14,8 +17,18 @@ const NAV_ITEMS = [
 ];
 
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(!!getToken());
   const [activeView, setActiveView] = useState("dashboard");
   const [personsSubView, setPersonsSubView] = useState(null);
+
+  useEffect(() => {
+    setUnauthorizedHandler(() => setIsLoggedIn(false));
+  }, []);
+
+  function handleLogout() {
+    clearToken();
+    setIsLoggedIn(false);
+  }
 
   function goToView(view) {
     setPersonsSubView(null);
@@ -23,15 +36,10 @@ export default function App() {
   }
 
   function renderMain() {
-    if (activeView === "dashboard") {
-      return <Dashboard onNavigate={goToView} />;
-    }
-    if (activeView === "history") {
-      return <OffboardingHistory />;
-    }
-    if (activeView === "orphaned") {
-      return <OrphanedAccessPanel />;
-    }
+    if (activeView === "dashboard") return <Dashboard onNavigate={goToView} />;
+    if (activeView === "history") return <OffboardingHistory />;
+    if (activeView === "orphaned") return <OrphanedAccessPanel />;
+
     if (personsSubView?.type === "detail") {
       return (
         <PersonDetail
@@ -57,6 +65,10 @@ export default function App() {
     );
   }
 
+  if (!isLoggedIn) {
+    return <Login onLoggedIn={() => setIsLoggedIn(true)} />;
+  }
+
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -75,6 +87,9 @@ export default function App() {
             </button>
           ))}
         </nav>
+        <button className="nav-item logout-button" onClick={handleLogout}>
+          Cerrar sesión
+        </button>
       </aside>
       <main className="content">{renderMain()}</main>
     </div>
