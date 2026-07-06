@@ -1,18 +1,20 @@
 """
 Modelo User: representa a alguien de RR.HH./seguridad que USA la
 herramienta (inicia sesión, dispara offboardings, revisa alertas).
-
-Importante: esto es distinto de Person. Person es la gente que se
-offboardea (empleados/contratistas de la empresa cliente). User es
-quien opera el sistema. Un User normalmente nunca es también un
-Person en el mismo grafo (aunque nada lo impide técnicamente).
 """
+import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Column, String, DateTime
+from sqlalchemy import Column, String, DateTime, Enum
 
 from app.models.database import Base
+
+
+class UserRole(str, enum.Enum):
+    OWNER = "owner"    # único en todo el sistema, el bootstrap inicial
+    ADMIN = "admin"    # crea personas, asigna accesos, dispara offboardings; puede crear viewers
+    VIEWER = "viewer"  # solo puede consultar (dashboard, historial, huérfanos)
 
 
 class User(Base):
@@ -21,9 +23,10 @@ class User(Base):
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     email = Column(String, nullable=False, unique=True, index=True)
     full_name = Column(String, nullable=False)
-    hashed_password = Column(String, nullable=False)  # NUNCA se guarda en texto plano
+    hashed_password = Column(String, nullable=False)
+    role = Column(Enum(UserRole), nullable=False, default=UserRole.VIEWER)
 
     created_at = Column(DateTime, default=datetime.utcnow)
 
     def __repr__(self):
-        return f"<User {self.email}>"
+        return f"<User {self.email} ({self.role.value})>"

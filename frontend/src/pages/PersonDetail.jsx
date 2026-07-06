@@ -3,7 +3,7 @@ import { api } from "../api/client";
 
 const RISK_ORDER = { critical: 0, high: 1, medium: 2, low: 3 };
 
-export default function PersonDetail({ personId, onBack }) {
+export default function PersonDetail({ personId, onBack, currentUser }) {
   const [person, setPerson] = useState(null);
   const [systems, setSystems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -92,6 +92,7 @@ export default function PersonDetail({ personId, onBack }) {
   );
 
   const canOffboard = person.status !== "offboarded";
+  const canWrite = currentUser?.role === "admin" || currentUser?.role === "owner";
   const grantedSystemIds = new Set(person.access_grants.map((g) => g.system_id));
   const availableSystems = systems.filter((s) => !grantedSystemIds.has(s.id));
 
@@ -135,7 +136,7 @@ export default function PersonDetail({ personId, onBack }) {
         </table>
       )}
 
-      {canOffboard && availableSystems.length > 0 && (
+      {canWrite && canOffboard && availableSystems.length > 0 && (
         <div className="offboard-panel">
           <h3>Asignar acceso</h3>
           <form onSubmit={handleAddGrant}>
@@ -191,7 +192,7 @@ export default function PersonDetail({ personId, onBack }) {
         </div>
       )}
 
-      {canOffboard && (
+      {canWrite && canOffboard && (
         <div className="offboard-panel">
           <h3>Iniciar offboarding</h3>
           <form onSubmit={handleOffboard}>

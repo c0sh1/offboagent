@@ -11,7 +11,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
-from app.models import PersonType, PersonStatus, AccessStatus, RiskLevel, OffboardingStatus
+from app.models import PersonType, PersonStatus, AccessStatus, RiskLevel, OffboardingStatus, UserRole
 
 
 class AccessGrantOut(BaseModel):
@@ -115,6 +115,7 @@ class UserCreate(BaseModel):
     email: str
     full_name: str
     password: str
+    role: UserRole = UserRole.VIEWER  # ignorado durante el bootstrap (primer usuario -> siempre admin)
 
 
 class UserOut(BaseModel):
@@ -123,6 +124,7 @@ class UserOut(BaseModel):
     id: str
     email: str
     full_name: str
+    role: UserRole
 
 
 class LoginRequest(BaseModel):

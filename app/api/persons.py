@@ -9,14 +9,14 @@ from sqlalchemy.orm import Session
 
 from app.models import get_db, Person, System, AccessGrant, User
 from app.api.schemas import PersonOut, PersonDetailOut, PersonCreate, AccessGrantOut, AccessGrantCreate
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, require_admin
 
 router = APIRouter(prefix="/persons", tags=["persons"])
 
 
 @router.post("", response_model=PersonOut, status_code=201)
 def create_person(
-    payload: PersonCreate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
+    payload: PersonCreate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)
 ):
     """Registra una nueva persona (empleado/contratista) en el grafo de identidad."""
     existing = db.query(Person).filter(Person.email == payload.email).first()
@@ -79,7 +79,7 @@ def add_access_grant(
     person_id: str,
     payload: AccessGrantCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     """
     Asigna un acceso nuevo a una persona en un sistema concreto.

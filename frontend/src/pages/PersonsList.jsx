@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
-export default function PersonsList({ onSelectPerson, onCreateNew }) {
+export default function PersonsList({ onSelectPerson, onCreateNew, currentUser }) {
   const [persons, setPersons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -17,13 +17,17 @@ export default function PersonsList({ onSelectPerson, onCreateNew }) {
   if (loading) return <p>Cargando personas...</p>;
   if (error) return <p className="error">Error: {error}</p>;
 
+  const canWrite = currentUser?.role === "admin" || currentUser?.role === "owner";
+
   return (
     <div>
       <div className="page-header-row">
         <h2>Personas</h2>
-        <button className="primary" onClick={onCreateNew}>
-          + Nueva persona
-        </button>
+        {canWrite && (
+          <button className="primary" onClick={onCreateNew}>
+            + Nueva persona
+          </button>
+        )}
       </div>
       <table>
         <thead>

@@ -446,3 +446,15 @@ tr.finding-no_active_grant_recorded { box-shadow: inset 3px 0 0 #FB923C; }
 .logout-button {
   margin-top: auto;
 }
+
+.current-user-tag {
+  margin-top: auto;
+  margin-bottom: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  padding: 0 0.5rem;
+}
+
+.logout-button {
+  margin-top: 0;
+}

@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.models import get_db, OffboardingEvent, User
 from app.api.schemas import OffboardingRequest, OffboardingEventOut, AuditLogEntryOut
 from app.services.offboarding_service import initiate_offboarding, execute_offboarding
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, require_admin
 
 router = APIRouter(prefix="/offboarding", tags=["offboarding"])
 
@@ -39,7 +39,7 @@ def list_offboarding_events(
 def start_offboarding(
     payload: OffboardingRequest,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user: User = Depends(require_admin),
 ):
     try:
         event = initiate_offboarding(

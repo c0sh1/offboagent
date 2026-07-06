@@ -25,6 +25,7 @@ async function request(path, options = {}) {
     throw new Error(errorBody.detail || `Error ${response.status}`);
   }
 
+  if (response.status === 204) return null;
   return response.json();
 }
 
@@ -35,6 +36,8 @@ export const api = {
     request("/auth/login", { method: "POST", body: JSON.stringify(payload) }),
   getMe: () => request("/auth/me"),
 
+  listUsers: () => request("/users"),
+  deleteUser: (userId) => request(`/users/${userId}`, { method: "DELETE" }),
   listPersons: () => request("/persons"),
   getPerson: (personId) => request(`/persons/${personId}`),
   createPerson: (payload) =>

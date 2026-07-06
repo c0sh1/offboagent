@@ -1,13 +1,14 @@
 """
 Dependencia de FastAPI que protege endpoints: exige un token JWT
-válido en el header 'Authorization: Bearer <token>'.
+válido en el header 'Authorization: Bearer <token>', lo verifica, y
+devuelve el User correspondiente.
 """
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
-from app.models import get_db, User
+from app.models import get_db, User, UserRole
 from app.auth.security import decode_access_token
 
 _security_scheme = HTTPBearer()
@@ -31,3 +32,18 @@ def get_current_user(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Usuario no encontrado")
 
     return user
+
+
+def require_admin(current_user: User = Depends(get_current_user)) -> User:
+    """
+    Para acciones destructivas/de escritura (crear personas, asignar
+    accesos, disparar offboardings). Owner y Admin pueden; un
+    'viewer' autenticado puede consultar todo, pero no ejecutar
+    estas acciones.
+    """
+    if current_user.role not in (UserRole.OWNER, UserRole.ADMIN):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Se requiere rol de administrador para esta acción.",
+        )
+    return current_user
