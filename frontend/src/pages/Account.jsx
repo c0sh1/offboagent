@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 
 const ROLE_LABELS = { owner: "Propietario", admin: "Administrador", viewer: "Solo lectura" };
@@ -10,6 +10,18 @@ export default function Account({ currentUser }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+
+  const isOwner = currentUser?.role === "owner";
+  const [orgName, setOrgName] = useState("");
+  const [orgSubmitting, setOrgSubmitting] = useState(false);
+  const [orgError, setOrgError] = useState(null);
+  const [orgSuccess, setOrgSuccess] = useState(false);
+
+  useEffect(() => {
+    if (isOwner) {
+      api.getOrganization().then((org) => setOrgName(org.name)).catch(() => {});
+    }
+  }, [isOwner]);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -35,6 +47,21 @@ export default function Account({ currentUser }) {
       setError(err.message);
     } finally {
       setSubmitting(false);
+    }
+  }
+
+  async function handleOrgSubmit(e) {
+    e.preventDefault();
+    setOrgError(null);
+    setOrgSuccess(false);
+    setOrgSubmitting(true);
+    try {
+      await api.updateOrganization({ name: orgName });
+      setOrgSuccess(true);
+    } catch (err) {
+      setOrgError(err.message);
+    } finally {
+      setOrgSubmitting(false);
     }
   }
 
@@ -89,6 +116,30 @@ export default function Account({ currentUser }) {
           </button>
         </form>
       </div>
+
+      {isOwner && (
+        <div className="offboard-panel">
+          <h3>Configuración de la empresa</h3>
+          <form onSubmit={handleOrgSubmit}>
+            <label>
+              Nombre de la empresa
+              <input
+                type="text"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                required
+              />
+            </label>
+
+            {orgError && <p className="error">{orgError}</p>}
+            {orgSuccess && <p className="ok-message">✅ Nombre actualizado correctamente.</p>}
+
+            <button type="submit" className="primary" disabled={orgSubmitting}>
+              {orgSubmitting ? "Guardando..." : "Guardar cambios"}
+            </button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

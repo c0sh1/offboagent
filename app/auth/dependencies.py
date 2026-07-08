@@ -47,3 +47,12 @@ def require_admin(current_user: User = Depends(get_current_user)) -> User:
             detail="Se requiere rol de administrador para esta acción.",
         )
     return current_user
+
+def require_owner(current_user: User = Depends(get_current_user)) -> User:
+    """Para acciones aún más sensibles (ej. renombrar la empresa) - solo el Owner."""
+    if current_user.role != UserRole.OWNER:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Se requiere ser el Owner de la empresa para esta acción.",
+        )
+    return current_user

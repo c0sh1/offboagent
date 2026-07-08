@@ -68,4 +68,7 @@ export const api = {
   listConnectorTypes: () => request("/systems/connector-types"),
   createSystem: (payload) =>
     request("/systems", { method: "POST", body: JSON.stringify(payload) }),
+  getOrganization: () => request("/organization"),
+  updateOrganization: (payload) =>
+    request("/organization", { method: "PUT", body: JSON.stringify(payload) }),
 };

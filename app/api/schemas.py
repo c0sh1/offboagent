@@ -185,6 +185,9 @@ class OrganizationOut(BaseModel):
     id: str
     name: str
 
+class OrganizationUpdate(BaseModel):
+    name: str
+
 
 class LoginRequest(BaseModel):
     email: str
