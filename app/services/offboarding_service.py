@@ -30,6 +30,7 @@ from app.models import (
     AuditLogEntry,
 )
 from app.connectors.registry import get_connector_for_system
+from app.connectors.base import ConnectorResult
 
 # Orden de prioridad de revocación: los accesos más críticos se
 # revocan primero (ej. admin de AWS antes que un canal de Slack).
@@ -124,13 +125,20 @@ def _revoke_single_grant(db: Session, event: OffboardingEvent, grant: AccessGran
     Revoca un único AccessGrant a través de su conector, y registra
     el resultado en el log de auditoría.
 
-    Devuelve True si HUBO error (para que execute_offboarding sepa
-    si debe marcar el evento como 'completado con errores').
+    Importante: TODO lo relacionado con el conector (instanciarlo con
+    sus credenciales descifradas, y llamarlo) va dentro de un único
+    try/except amplio. Unas credenciales mal formadas en UN sistema
+    no deben poder tirar abajo el offboarding completo de una persona
+    que tiene accesos en otros sistemas.
     """
     system = grant.system
-    connector = get_connector_for_system(system)
 
-    result = connector.revoke_access(grant.external_account_id or "unknown")
+    try:
+        connector = get_connector_for_system(system)
+        result = connector.revoke_access(grant.external_account_id or "unknown")
+    except Exception as e:
+        result = ConnectorResult(success=False, detail=f"Error inesperado del conector: {e}")
+
 
     if result.success:
         grant.status = AccessStatus.REVOKED
