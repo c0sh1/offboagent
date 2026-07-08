@@ -1,11 +1,10 @@
 """
-Endpoints del flujo de offboarding: aquí es donde RR.HH. "aprieta el botón".
-Todos los endpoints requieren autenticación.
+Endpoints del flujo de offboarding, filtrados por organización.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import get_db, OffboardingEvent, User
+from app.models import get_db, OffboardingEvent, Person, User
 from app.api.schemas import OffboardingRequest, OffboardingEventOut, AuditLogEntryOut
 from app.services.offboarding_service import initiate_offboarding, execute_offboarding
 from app.auth.dependencies import get_current_user, require_admin
@@ -30,8 +29,12 @@ def _serialize_event(event: OffboardingEvent) -> OffboardingEventOut:
 def list_offboarding_events(
     db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    """Historial completo de offboardings, más recientes primero."""
-    events = db.query(OffboardingEvent).order_by(OffboardingEvent.started_at.desc()).all()
+    events = (
+        db.query(OffboardingEvent)
+        .filter(OffboardingEvent.organization_id == current_user.organization_id)
+        .order_by(OffboardingEvent.started_at.desc())
+        .all()
+    )
     return [_serialize_event(e) for e in events]
 
 
@@ -41,12 +44,17 @@ def start_offboarding(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
+    person = (
+        db.query(Person)
+        .filter(Person.id == payload.person_id, Person.organization_id == current_user.organization_id)
+        .first()
+    )
+    if person is None:
+        raise HTTPException(status_code=404, detail="Persona no encontrada en tu empresa")
+
     try:
         event = initiate_offboarding(
-            db,
-            person_id=payload.person_id,
-            initiated_by=payload.initiated_by,
-            reason=payload.reason,
+            db, person_id=payload.person_id, initiated_by=payload.initiated_by, reason=payload.reason
         )
         event = execute_offboarding(db, event.id)
     except ValueError as e:
@@ -59,7 +67,14 @@ def start_offboarding(
 def get_offboarding_event(
     event_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    event = db.query(OffboardingEvent).filter(OffboardingEvent.id == event_id).first()
+    event = (
+        db.query(OffboardingEvent)
+        .filter(
+            OffboardingEvent.id == event_id,
+            OffboardingEvent.organization_id == current_user.organization_id,
+        )
+        .first()
+    )
     if event is None:
         raise HTTPException(status_code=404, detail="Evento de offboarding no encontrado")
     return _serialize_event(event)

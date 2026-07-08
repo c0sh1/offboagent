@@ -1,6 +1,6 @@
 """
-Endpoints de seguridad: detección proactiva de accesos huérfanos.
-Requiere autenticación.
+Endpoints de seguridad: detección proactiva de accesos huérfanos,
+filtrada a la organización de quien llama.
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -14,10 +14,8 @@ router = APIRouter(prefix="/security", tags=["security"])
 
 
 @router.get("/orphaned-access", response_model=list[OrphanFindingOut])
-def get_orphaned_access(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
-):
-    findings = detect_orphaned_access(db)
+def get_orphaned_access(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    findings = detect_orphaned_access(db, current_user.organization_id)
     return [
         OrphanFindingOut(
             system_name=f.system_name,

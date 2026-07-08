@@ -1,5 +1,6 @@
 """
 Endpoints relacionados con personas (empleados/contratistas).
+Todas las consultas están filtradas por la organización de quien llama.
 """
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
@@ -22,12 +23,16 @@ router = APIRouter(prefix="/persons", tags=["persons"])
 def create_person(
     payload: PersonCreate, db: Session = Depends(get_db), current_user: User = Depends(require_admin)
 ):
-    """Registra una nueva persona (empleado/contratista) en el grafo de identidad."""
-    existing = db.query(Person).filter(Person.email == payload.email).first()
+    existing = (
+        db.query(Person)
+        .filter(Person.email == payload.email, Person.organization_id == current_user.organization_id)
+        .first()
+    )
     if existing is not None:
-        raise HTTPException(status_code=400, detail="Ya existe una persona con ese email")
+        raise HTTPException(status_code=400, detail="Ya existe una persona con ese email en tu empresa")
 
     person = Person(
+        organization_id=current_user.organization_id,
         full_name=payload.full_name,
         email=payload.email,
         person_type=payload.person_type,
@@ -37,6 +42,7 @@ def create_person(
 
     db.add(
         PersonAuditLog(
+            organization_id=current_user.organization_id,
             actor_email=current_user.email,
             action="create_person",
             person_email=person.email,
@@ -52,26 +58,28 @@ def create_person(
 
 @router.get("", response_model=list[PersonOut])
 def list_persons(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """Lista todas las personas registradas."""
-    return db.query(Person).all()
+    return db.query(Person).filter(Person.organization_id == current_user.organization_id).all()
 
 
 @router.get("/audit-log", response_model=list[PersonAuditLogOut])
 def get_person_audit_log(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    """
-    Quién dio de alta a cada persona y quién le asignó cada acceso.
-    Visible para cualquier usuario logueado (incluidos los Viewer):
-    esta transparencia es justo el propósito de un rol de solo lectura.
-    """
-    return db.query(PersonAuditLog).order_by(PersonAuditLog.timestamp.desc()).all()
+    return (
+        db.query(PersonAuditLog)
+        .filter(PersonAuditLog.organization_id == current_user.organization_id)
+        .order_by(PersonAuditLog.timestamp.desc())
+        .all()
+    )
 
 
 @router.get("/{person_id}", response_model=PersonDetailOut)
 def get_person(
     person_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
 ):
-    """Detalle de una persona, incluyendo TODOS sus accesos (el grafo de identidad)."""
-    person = db.query(Person).filter(Person.id == person_id).first()
+    person = (
+        db.query(Person)
+        .filter(Person.id == person_id, Person.organization_id == current_user.organization_id)
+        .first()
+    )
     if person is None:
         raise HTTPException(status_code=404, detail="Persona no encontrada")
 
@@ -106,16 +114,19 @@ def add_access_grant(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
-    """
-    Asigna un acceso nuevo a una persona en un sistema concreto.
-    Esta es la pieza que completa el ciclo de vida: crear persona ->
-    asignarle accesos -> (más adelante) offboardearla con sentido.
-    """
-    person = db.query(Person).filter(Person.id == person_id).first()
+    person = (
+        db.query(Person)
+        .filter(Person.id == person_id, Person.organization_id == current_user.organization_id)
+        .first()
+    )
     if person is None:
         raise HTTPException(status_code=404, detail="Persona no encontrada")
 
-    system = db.query(System).filter(System.id == payload.system_id).first()
+    system = (
+        db.query(System)
+        .filter(System.id == payload.system_id, System.organization_id == current_user.organization_id)
+        .first()
+    )
     if system is None:
         raise HTTPException(status_code=404, detail="Sistema no encontrado")
 
@@ -130,6 +141,7 @@ def add_access_grant(
 
     db.add(
         PersonAuditLog(
+            organization_id=current_user.organization_id,
             actor_email=current_user.email,
             action="assign_access_grant",
             person_email=person.email,

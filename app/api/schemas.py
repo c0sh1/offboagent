@@ -1,11 +1,6 @@
 """
 Esquemas Pydantic: definen la "forma" de los datos que entran y
-salen por la API. Son distintos de los modelos SQLAlchemy (app/models):
-los modelos son la representación en base de datos, estos esquemas
-son el contrato público de la API (lo que ve el cliente HTTP).
-
-Separarlos es importante: nos permite, por ejemplo, no exponer
-campos internos, o dar forma distinta a la respuesta sin tocar la BD.
+salen por la API.
 """
 from datetime import datetime
 
@@ -21,7 +16,7 @@ class AccessGrantOut(BaseModel):
     role: str | None
     risk_level: RiskLevel
     status: AccessStatus
-    system_name: str | None = None  # se rellena a mano en el router (viene de grant.system.name)
+    system_name: str | None = None
     system_id: str | None = None
     external_account_id: str | None = None
 
@@ -80,6 +75,27 @@ class SystemOut(BaseModel):
     name: str
     category: str
     connector_key: str
+    has_real_credentials: bool = False
+
+
+class SystemCreate(BaseModel):
+    connector_key: str
+    name: str | None = None
+    credentials: dict[str, str] | None = None
+
+
+class ConnectorCredentialFieldOut(BaseModel):
+    key: str
+    label: str
+    secret: bool
+
+
+class ConnectorTypeOut(BaseModel):
+    connector_key: str
+    label: str
+    category: str
+    credential_fields: list[ConnectorCredentialFieldOut]
+    has_real_integration: bool
 
 
 class AccessGrantCreate(BaseModel):
@@ -111,30 +127,6 @@ class OffboardingEventOut(BaseModel):
     summary_report: str | None
     log_entries: list[AuditLogEntryOut]
 
-class UserCreate(BaseModel):
-    email: str
-    full_name: str
-    password: str = Field(min_length=8, description="Mínimo 8 caracteres")
-    role: UserRole = UserRole.VIEWER
-
-
-class UserOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: str
-    email: str
-    full_name: str
-    role: UserRole
-
-
-class LoginRequest(BaseModel):
-    email: str
-    password: str
-
-
-class TokenOut(BaseModel):
-    access_token: str
-    token_type: str = "bearer"
 
 class PasswordChangeRequest(BaseModel):
     current_password: str
@@ -151,6 +143,7 @@ class UserAuditLogOut(BaseModel):
     target_role: str | None
     timestamp: datetime
 
+
 class PersonAuditLogOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -160,3 +153,44 @@ class PersonAuditLogOut(BaseModel):
     person_email: str
     detail: str | None
     timestamp: datetime
+
+
+class UserCreate(BaseModel):
+    email: str
+    full_name: str
+    password: str = Field(min_length=8, description="Mínimo 8 caracteres")
+    role: UserRole = UserRole.VIEWER
+
+
+class UserOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    email: str
+    full_name: str
+    role: UserRole
+    organization_name: str | None = None
+
+
+class OrganizationRegisterRequest(BaseModel):
+    organization_name: str
+    full_name: str
+    email: str
+    password: str = Field(min_length=8, description="Mínimo 8 caracteres")
+
+
+class OrganizationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: str
+    name: str
+
+
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+
+class TokenOut(BaseModel):
+    access_token: str
+    token_type: str = "bearer"

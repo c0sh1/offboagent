@@ -1,6 +1,5 @@
 """
-Endpoint de estadísticas agregadas, para la pantalla de dashboard.
-Requiere autenticación.
+Endpoint de estadísticas agregadas, filtradas a la organización de quien llama.
 """
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
@@ -14,22 +13,36 @@ router = APIRouter(prefix="/dashboard", tags=["dashboard"])
 
 
 @router.get("/stats", response_model=DashboardStatsOut)
-def get_dashboard_stats(
-    db: Session = Depends(get_db), current_user: User = Depends(get_current_user)
-):
-    total_persons = db.query(Person).count()
-    active_persons = db.query(Person).filter(Person.status == PersonStatus.ACTIVE).count()
-    offboarding_in_progress = db.query(Person).filter(
-        Person.status == PersonStatus.OFFBOARDING
-    ).count()
-    offboarded_persons = db.query(Person).filter(Person.status == PersonStatus.OFFBOARDED).count()
-    systems_count = db.query(System).count()
-    critical_active_grants = (
-        db.query(AccessGrant)
-        .filter(AccessGrant.status == AccessStatus.ACTIVE, AccessGrant.risk_level == RiskLevel.CRITICAL)
+def get_dashboard_stats(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    org_id = current_user.organization_id
+
+    total_persons = db.query(Person).filter(Person.organization_id == org_id).count()
+    active_persons = (
+        db.query(Person).filter(Person.organization_id == org_id, Person.status == PersonStatus.ACTIVE).count()
+    )
+    offboarding_in_progress = (
+        db.query(Person)
+        .filter(Person.organization_id == org_id, Person.status == PersonStatus.OFFBOARDING)
         .count()
     )
-    orphaned_access_count = len(detect_orphaned_access(db))
+    offboarded_persons = (
+        db.query(Person)
+        .filter(Person.organization_id == org_id, Person.status == PersonStatus.OFFBOARDED)
+        .count()
+    )
+    systems_count = db.query(System).filter(System.organization_id == org_id).count()
+
+    critical_active_grants = (
+        db.query(AccessGrant)
+        .join(Person, AccessGrant.person_id == Person.id)
+        .filter(
+            Person.organization_id == org_id,
+            AccessGrant.status == AccessStatus.ACTIVE,
+            AccessGrant.risk_level == RiskLevel.CRITICAL,
+        )
+        .count()
+    )
+    orphaned_access_count = len(detect_orphaned_access(db, org_id))
 
     return DashboardStatsOut(
         total_persons=total_persons,

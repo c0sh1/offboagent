@@ -23,9 +23,6 @@ app = FastAPI(
     version="0.1.0",
 )
 
-# CORS: permite que el frontend (React en localhost:5173 durante desarrollo)
-# pueda llamar a esta API desde el navegador. Sin esto, el navegador
-# bloquea las peticiones por política de same-origin.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
@@ -34,13 +31,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Crea las tablas si no existen (equivalente a lo que hace scripts/init_db.py)
 Base.metadata.create_all(bind=engine)
 
-# Aviso de seguridad: si nunca configuraste tu propia JWT_SECRET_KEY,
-# todos los tokens se firman con el valor de ejemplo que está escrito
-# en el código fuente (visible para cualquiera que vea el repo).
-# Cualquiera que lo conozca podría falsificar tokens de sesión válidos.
 _DEFAULT_JWT_SECRET = "cambia-esto-en-produccion-por-algo-aleatorio-y-largo"
 if settings.jwt_secret_key == _DEFAULT_JWT_SECRET:
     print(
@@ -48,6 +40,14 @@ if settings.jwt_secret_key == _DEFAULT_JWT_SECRET:
         "   Cualquiera que vea este código podría falsificar sesiones válidas.\n"
         "   Configura una clave propia, larga y aleatoria, en tu archivo .env\n"
         "   antes de usar esto con datos reales.\n"
+    )
+
+if not settings.credentials_encryption_key:
+    print(
+        "\n⚠️  ADVERTENCIA: no has configurado CREDENTIALS_ENCRYPTION_KEY.\n"
+        "   No podrás guardar credenciales reales de conectores (GitHub, AWS...)\n"
+        "   hasta que generes una y la pongas en tu .env. Genera una con:\n"
+        '   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"\n'
     )
 
 app.include_router(persons_router)

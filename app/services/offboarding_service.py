@@ -29,7 +29,7 @@ from app.models import (
     OffboardingStatus,
     AuditLogEntry,
 )
-from app.connectors.registry import get_connector
+from app.connectors.registry import get_connector_for_system
 
 # Orden de prioridad de revocación: los accesos más críticos se
 # revocan primero (ej. admin de AWS antes que un canal de Slack).
@@ -52,6 +52,7 @@ def initiate_offboarding(
     person.status = PersonStatus.OFFBOARDING
 
     event = OffboardingEvent(
+        organization_id=person.organization_id,
         person_id=person.id,
         initiated_by=initiated_by,
         reason=reason,
@@ -127,7 +128,7 @@ def _revoke_single_grant(db: Session, event: OffboardingEvent, grant: AccessGran
     si debe marcar el evento como 'completado con errores').
     """
     system = grant.system
-    connector = get_connector(system.connector_key)
+    connector = get_connector_for_system(system)
 
     result = connector.revoke_access(grant.external_account_id or "unknown")
 

@@ -44,6 +44,10 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "cambia-esto-en-produccion-por-algo-aleatorio-y-largo"
     jwt_expire_hours: int = 24
 
+    # Cifrado de credenciales de conectores (por empresa). Clave Fernet:
+    # python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+    credentials_encryption_key: str = ""
+
 
 # Instancia única (patrón singleton simple) que se importa en todo el proyecto
 settings = Settings()

@@ -24,18 +24,18 @@ import boto3
 from botocore.exceptions import ClientError
 
 from app.connectors.base import BaseConnector, ConnectorResult
-from app.config import settings
+
 
 
 class AWSIAMConnector(BaseConnector):
     connector_key = "aws_iam"
 
-    def __init__(self):
+    def __init__(self, access_key_id: str, secret_access_key: str, region: str = "us-east-1"):
         self._client = boto3.client(
             "iam",
-            aws_access_key_id=settings.aws_access_key_id,
-            aws_secret_access_key=settings.aws_secret_access_key,
-            region_name=settings.aws_region,
+            aws_access_key_id=access_key_id,
+            aws_secret_access_key=secret_access_key,
+            region_name=region,
         )
 
     def revoke_access(self, external_account_id: str) -> ConnectorResult:

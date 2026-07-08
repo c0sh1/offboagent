@@ -3,7 +3,8 @@ import { api } from "../api/client";
 import { setToken } from "../api/authToken";
 
 export default function Login({ onLoggedIn }) {
-  const [mode, setMode] = useState("login");
+  const [mode, setMode] = useState("login"); // "login" | "register-org"
+  const [organizationName, setOrganizationName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
@@ -15,8 +16,13 @@ export default function Login({ onLoggedIn }) {
     setSubmitting(true);
     setError(null);
     try {
-      if (mode === "register") {
-        await api.register({ email, full_name: fullName, password });
+      if (mode === "register-org") {
+        await api.registerOrganization({
+          organization_name: organizationName,
+          full_name: fullName,
+          email,
+          password,
+        });
       }
       const { access_token } = await api.login({ email, password });
       setToken(access_token);
@@ -35,11 +41,22 @@ export default function Login({ onLoggedIn }) {
           <span className="brand-mark" aria-hidden="true">◆</span>
           <span className="brand-name">Offboarding Agent</span>
         </div>
-        <h2>{mode === "login" ? "Iniciar sesión" : "Crear cuenta de administrador"}</h2>
+        <h2>{mode === "login" ? "Iniciar sesión" : "Registrar tu empresa"}</h2>
 
-        {mode === "register" && (
+        {mode === "register-org" && (
           <label>
-            Nombre completo
+            Nombre de tu empresa
+            <input
+              type="text"
+              value={organizationName}
+              onChange={(e) => setOrganizationName(e.target.value)}
+              required
+            />
+          </label>
+        )}
+        {mode === "register-org" && (
+          <label>
+            Tu nombre completo
             <input
               type="text"
               value={fullName}
@@ -71,16 +88,20 @@ export default function Login({ onLoggedIn }) {
         {error && <p className="error">{error}</p>}
 
         <button type="submit" className="primary" disabled={submitting}>
-          {submitting ? "Procesando..." : mode === "login" ? "Entrar" : "Crear cuenta y entrar"}
+          {submitting
+            ? "Procesando..."
+            : mode === "login"
+            ? "Entrar"
+            : "Crear mi empresa y entrar"}
         </button>
 
         <button
           type="button"
-          onClick={() => setMode(mode === "login" ? "register" : "login")}
+          onClick={() => setMode(mode === "login" ? "register-org" : "login")}
           style={{ background: "transparent", border: "none" }}
         >
           {mode === "login"
-            ? "¿Primera vez? Crear cuenta de administrador"
+            ? "¿Primera vez? Registra tu empresa"
             : "¿Ya tienes cuenta? Iniciar sesión"}
         </button>
       </form>

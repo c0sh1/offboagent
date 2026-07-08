@@ -5,6 +5,7 @@ import PersonDetail from "./pages/PersonDetail";
 import PersonCreate from "./pages/PersonCreate";
 import OffboardingHistory from "./pages/OffboardingHistory";
 import OrphanedAccessPanel from "./pages/OrphanedAccessPanel";
+import Systems from "./pages/Systems";
 import Users from "./pages/Users";
 import Account from "./pages/Account";
 import Login from "./pages/Login";
@@ -14,6 +15,7 @@ import { api, setUnauthorizedHandler } from "./api/client";
 const BASE_NAV_ITEMS = [
   { id: "dashboard", label: "Resumen" },
   { id: "persons", label: "Personas" },
+  { id: "systems", label: "Sistemas" },
   { id: "history", label: "Historial" },
   { id: "orphaned", label: "Accesos huérfanos" },
   { id: "account", label: "Mi cuenta" },
@@ -56,6 +58,7 @@ export default function App() {
 
   function renderMain() {
     if (activeView === "dashboard") return <Dashboard onNavigate={goToView} />;
+    if (activeView === "systems") return <Systems currentUser={currentUser} />;
     if (activeView === "history") return <OffboardingHistory />;
     if (activeView === "orphaned") return <OrphanedAccessPanel />;
     if (activeView === "users") return <Users currentUser={currentUser} />;
@@ -112,6 +115,12 @@ export default function App() {
         </nav>
         {currentUser && (
           <p className="current-user-tag">
+            {currentUser.organization_name && (
+              <>
+                {currentUser.organization_name}
+                <br />
+              </>
+            )}
             {currentUser.full_name} · {currentUser.role}
           </p>
         )}

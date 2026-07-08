@@ -28,6 +28,7 @@ class OffboardingEvent(Base):
     __tablename__ = "offboarding_events"
 
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    organization_id = Column(String, ForeignKey("organizations.id"), nullable=False, index=True)
     person_id = Column(String, ForeignKey("persons.id"), nullable=False, index=True)
 
     initiated_by = Column(String, nullable=False)   # ej. "hr@empresa.com"
@@ -47,6 +48,9 @@ class OffboardingEvent(Base):
 
     def __repr__(self):
         return f"<OffboardingEvent person={self.person_id} status={self.status.value}>"
+
+
+    
 
 
 class AuditLogEntry(Base):

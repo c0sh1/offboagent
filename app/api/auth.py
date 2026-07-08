@@ -1,87 +1,111 @@
 """
-Endpoints de autenticación: registro, login, y cambio de contraseña.
+Endpoints de autenticación: registro de empresa nueva, registro de
+usuarios adicionales, login, y cambio de contraseña.
 """
-from fastapi import APIRouter, Depends, HTTPException, Request
-import jwt
-
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from app.models import get_db, User, UserRole, UserAuditLog
-from app.api.schemas import UserCreate, UserOut, LoginRequest, TokenOut, PasswordChangeRequest
-from app.auth.security import hash_password, verify_password, create_access_token, decode_access_token
+from app.models import get_db, User, UserRole, UserAuditLog, Organization
+from app.api.schemas import (
+    UserCreate,
+    UserOut,
+    LoginRequest,
+    TokenOut,
+    PasswordChangeRequest,
+    OrganizationRegisterRequest,
+)
+from app.auth.security import hash_password, verify_password, create_access_token
 from app.auth.dependencies import get_current_user
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-def _get_caller_from_token(request: Request, db: Session) -> User:
-    auth_header = request.headers.get("Authorization", "")
-    if not auth_header.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Debes iniciar sesión para crear un usuario nuevo.")
-
-    token = auth_header.removeprefix("Bearer ").strip()
-    try:
-        payload = decode_access_token(token)
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=401, detail="Token inválido o expirado")
-
-    caller = db.query(User).filter(User.id == payload.get("sub")).first()
-    if caller is None:
-        raise HTTPException(status_code=401, detail="Usuario no encontrado")
-    return caller
+def _to_user_out(user: User) -> UserOut:
+    return UserOut(
+        id=user.id,
+        email=user.email,
+        full_name=user.full_name,
+        role=user.role,
+        organization_name=user.organization.name if user.organization else None,
+    )
 
 
-def _determine_new_user_role(caller: User | None, requested_role: UserRole, is_bootstrap: bool) -> UserRole:
-    if is_bootstrap:
-        return UserRole.OWNER
-
-    if requested_role == UserRole.OWNER:
-        raise HTTPException(status_code=403, detail="Solo puede haber un Owner en el sistema.")
-
-    if caller.role == UserRole.OWNER:
-        return requested_role
-
-    if caller.role == UserRole.ADMIN:
-        if requested_role != UserRole.VIEWER:
-            raise HTTPException(
-                status_code=403, detail="Un Admin solo puede crear usuarios de solo lectura (Viewer)."
-            )
-        return UserRole.VIEWER
-
-    raise HTTPException(status_code=403, detail="No tienes permiso para crear usuarios nuevos.")
-
-
-@router.post("/register", response_model=UserOut, status_code=201)
-def register(payload: UserCreate, request: Request, db: Session = Depends(get_db)):
+@router.post("/register-organization", response_model=UserOut, status_code=201)
+def register_organization(payload: OrganizationRegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing is not None:
         raise HTTPException(status_code=400, detail="Ya existe un usuario con ese email")
 
-    is_bootstrap = db.query(User).count() == 0
-    caller = None if is_bootstrap else _get_caller_from_token(request, db)
+    organization = Organization(name=payload.organization_name)
+    db.add(organization)
+    db.flush()
 
-    role = _determine_new_user_role(caller, payload.role, is_bootstrap)
-
-    user = User(
+    owner = User(
+        organization_id=organization.id,
         email=payload.email,
         full_name=payload.full_name,
         hashed_password=hash_password(payload.password),
-        role=role,
+        role=UserRole.OWNER,
+    )
+    db.add(owner)
+
+    db.add(
+        UserAuditLog(
+            organization_id=organization.id,
+            actor_email=owner.email,
+            action="create_user",
+            target_email=owner.email,
+            target_role=UserRole.OWNER.value,
+        )
+    )
+
+    db.commit()
+    db.refresh(owner)
+    return _to_user_out(owner)
+
+
+@router.post("/register", response_model=UserOut, status_code=201)
+def register(
+    payload: UserCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    existing = db.query(User).filter(User.email == payload.email).first()
+    if existing is not None:
+        raise HTTPException(status_code=400, detail="Ya existe un usuario con ese email")
+
+    if payload.role == UserRole.OWNER:
+        raise HTTPException(status_code=403, detail="Solo puede haber un Owner por empresa.")
+
+    if current_user.role == UserRole.ADMIN and payload.role != UserRole.VIEWER:
+        raise HTTPException(
+            status_code=403, detail="Un Admin solo puede crear usuarios de solo lectura (Viewer)."
+        )
+    if current_user.role == UserRole.VIEWER:
+        raise HTTPException(status_code=403, detail="No tienes permiso para crear usuarios nuevos.")
+
+    user = User(
+        organization_id=current_user.organization_id,
+        email=payload.email,
+        full_name=payload.full_name,
+        hashed_password=hash_password(payload.password),
+        role=payload.role,
     )
     db.add(user)
 
     db.add(
         UserAuditLog(
-            actor_email=caller.email if caller else user.email,
+            organization_id=current_user.organization_id,
+            actor_email=current_user.email,
             action="create_user",
             target_email=user.email,
-            target_role=role.value,
+            target_role=payload.role.value,
         )
     )
 
     db.commit()
     db.refresh(user)
-    return user
+    return _to_user_out(user)
 
 
 @router.post("/login", response_model=TokenOut)
@@ -96,7 +120,7 @@ def login(payload: LoginRequest, db: Session = Depends(get_db)):
 
 @router.get("/me", response_model=UserOut)
 def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
+    return _to_user_out(current_user)
 
 
 @router.post("/me/password", status_code=204)
@@ -105,11 +129,6 @@ def change_my_password(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Cambio de contraseña en autoservicio: cualquier usuario logueado
-    (sea Owner, Admin o Viewer) puede cambiar SU PROPIA contraseña,
-    sin depender de que un admin lo haga por él.
-    """
     if not verify_password(payload.current_password, current_user.hashed_password):
         raise HTTPException(status_code=401, detail="La contraseña actual no es correcta")
 

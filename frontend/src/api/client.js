@@ -30,6 +30,8 @@ async function request(path, options = {}) {
 }
 
 export const api = {
+  registerOrganization: (payload) =>
+    request("/auth/register-organization", { method: "POST", body: JSON.stringify(payload) }),
   register: (payload) =>
     request("/auth/register", { method: "POST", body: JSON.stringify(payload) }),
   login: (payload) =>
@@ -42,8 +44,6 @@ export const api = {
   deleteUser: (userId) => request(`/users/${userId}`, { method: "DELETE" }),
   getUserAuditLog: () => request("/users/audit-log"),
 
-  listUsers: () => request("/users"),
-  deleteUser: (userId) => request(`/users/${userId}`, { method: "DELETE" }),
   listPersons: () => request("/persons"),
   getPerson: (personId) => request(`/persons/${personId}`),
   createPerson: (payload) =>
@@ -65,4 +65,7 @@ export const api = {
   getDashboardStats: () => request("/dashboard/stats"),
 
   listSystems: () => request("/systems"),
+  listConnectorTypes: () => request("/systems/connector-types"),
+  createSystem: (payload) =>
+    request("/systems", { method: "POST", body: JSON.stringify(payload) }),
 };
